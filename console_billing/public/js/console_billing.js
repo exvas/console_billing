@@ -12,6 +12,11 @@
 		return (frappe && frappe.boot && frappe.boot.console_billing) || null;
 	}
 
+	// Only allow safe schemes into an href — never javascript:/data:.
+	function safeUrl(u) {
+		return u && /^(https?|upi|tel|mailto):/i.test(u) ? u : "";
+	}
+
 	function money(cb) {
 		if (!cb.amount) return "";
 		var sym = {
@@ -45,7 +50,11 @@
 			+ "text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);font-family:inherit}"
 			+ "#cb-block h1{font-size:22px;margin:0 0 10px;color:#b42318}"
 			+ "#cb-block p{font-size:15px;color:#3b4148;margin:6px 0;line-height:1.5}"
-			+ "#cb-block .cb-contact{margin-top:18px;font-size:14px;color:#111}";
+			+ "#cb-block .cb-contact{margin-top:18px;font-size:14px;color:#111}"
+			+ "#cb-renew{display:inline-block;margin-top:22px;padding:11px 22px;border-radius:10px;"
+			+ "background:#0f7a3d;color:#fff;font-size:15px;font-weight:600;text-decoration:none;cursor:pointer}"
+			+ "#cb-renew:hover{background:#0c6432}"
+			+ "#cb-pill.cb-link{cursor:pointer}";
 		var s = document.createElement("style");
 		s.id = "cb-styles";
 		s.textContent = css;
@@ -71,6 +80,18 @@
 			contact +
 			"</div>";
 		document.body.appendChild(el);
+		// Renew CTA — href set as a property (not innerHTML) after scheme check,
+		// so a hostile URL can neither inject markup nor a javascript: scheme.
+		var url = safeUrl(cb.renew_url);
+		if (url) {
+			var a = document.createElement("a");
+			a.id = "cb-renew";
+			a.textContent = "Renew Subscription";
+			a.href = url;
+			a.target = "_blank";
+			a.rel = "noopener noreferrer";
+			el.querySelector(".cb-card").appendChild(a);
+		}
 	}
 
 	function removePill() {
@@ -104,6 +125,12 @@
 		if (cls) pill.className = cls;
 		pill.title = "Subscription end date: " + fmtDate(cb.end_date);
 		pill.textContent = label;
+		var url = safeUrl(cb.renew_url);
+		if (url) {
+			pill.className = (pill.className ? pill.className + " " : "") + "cb-link";
+			pill.title = "Renew subscription";
+			pill.addEventListener("click", function () { window.open(url, "_blank", "noopener"); });
+		}
 		// Insert before the nav items so it sits on the left of the right-side cluster.
 		nav.insertBefore(pill, nav.firstChild);
 		return true;

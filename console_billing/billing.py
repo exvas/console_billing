@@ -34,6 +34,7 @@ def get_state():
     hard_lock = bool(conf.get("console_billing_hard_lock"))
     amount = str(conf.get("console_billing_amount") or "").strip()      # e.g. "30.00"
     currency = str(conf.get("console_billing_currency") or "").strip()  # e.g. "INR"
+    renew_url = str(conf.get("console_billing_renew_url") or "").strip()  # pay/contact link
 
     end_date = None
     days_left = None
@@ -66,6 +67,7 @@ def get_state():
         "contact": contact,
         "amount": amount,
         "currency": currency,
+        "renew_url": renew_url,
     }
 
 
