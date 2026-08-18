@@ -26,7 +26,8 @@ app_license = "mit"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/console_billing/css/console_billing.css"
-app_include_js = "/assets/console_billing/js/console_billing.js"
+# Bundled (content-hashed) so a JS update busts the browser cache automatically.
+app_include_js = "console_billing.bundle.js"
 
 # Expose billing state to the desk (frappe.boot.console_billing)
 extend_bootinfo = "console_billing.billing.boot"
