@@ -12,6 +12,15 @@
 		return (frappe && frappe.boot && frappe.boot.console_billing) || null;
 	}
 
+	function money(cb) {
+		if (!cb.amount) return "";
+		var sym = {
+			INR: "₹", USD: "$", EUR: "€", GBP: "£",
+			AED: "AED ", SAR: "SAR ", QAR: "QAR ", OMR: "OMR ", KWD: "KWD ", BHD: "BHD ",
+		}[String(cb.currency || "").toUpperCase()] || (cb.currency ? cb.currency + " " : "");
+		return sym + cb.amount;
+	}
+
 	function fmtDate(iso) {
 		// iso is "YYYY-MM-DD"; render as e.g. "12 Sep 2026"
 		try {
@@ -49,12 +58,15 @@
 		var contact = cb.contact
 			? '<div class="cb-contact">Contact: ' + frappe.utils.escape_html(cb.contact) + "</div>"
 			: "";
+		var m = money(cb);
+		var amountDue = m ? '<p class="cb-amount">Amount due: <strong>' + frappe.utils.escape_html(m) + "</strong></p>" : "";
 		var el = document.createElement("div");
 		el.id = "cb-block";
 		el.innerHTML =
 			'<div class="cb-card">' +
 			"<h1>Site is suspended — Bill not Paid</h1>" +
 			"<p>This site has been suspended because the subscription bill is unpaid.</p>" +
+			amountDue +
 			"<p>Please clear the outstanding payment to restore access.</p>" +
 			contact +
 			"</div>";
@@ -85,6 +97,8 @@
 		} else {
 			label = "Next billing: " + fmtDate(cb.end_date) + " · " + cb.days_left + " days left";
 		}
+		var m = money(cb);
+		if (m) label += " · " + m;
 		var pill = document.createElement("span");
 		pill.id = "cb-pill";
 		if (cls) pill.className = cls;

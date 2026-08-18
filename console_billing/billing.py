@@ -32,6 +32,8 @@ def get_state():
     start_raw = conf.get("console_billing_start_date")
     contact = str(conf.get("console_billing_contact") or "").strip()
     hard_lock = bool(conf.get("console_billing_hard_lock"))
+    amount = str(conf.get("console_billing_amount") or "").strip()      # e.g. "30.00"
+    currency = str(conf.get("console_billing_currency") or "").strip()  # e.g. "INR"
 
     end_date = None
     days_left = None
@@ -62,6 +64,8 @@ def get_state():
         "suspended": suspended,
         "hard_lock": hard_lock,
         "contact": contact,
+        "amount": amount,
+        "currency": currency,
     }
 
 
