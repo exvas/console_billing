@@ -44,6 +44,10 @@
 			+ "background:var(--bg-green,#e6f4ea);color:var(--text-green,#0f7a3d);border:1px solid rgba(0,0,0,.06)}"
 			+ "#cb-pill.cb-warn{background:#fef3e2;color:#9a5b00}"
 			+ "#cb-pill.cb-danger{background:#fdecec;color:#b42318}"
+			+ "#cb-renew-nav{display:inline-flex;align-items:center;height:26px;padding:0 12px;margin:0 4px;"
+			+ "border-radius:13px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1;text-decoration:none;"
+			+ "background:#0f7a3d;color:#fff;cursor:pointer}"
+			+ "#cb-renew-nav:hover{background:#0c6432;color:#fff}"
 			+ "#cb-block{position:fixed;inset:0;z-index:2147483000;background:rgba(20,24,28,.94);"
 			+ "display:flex;align-items:center;justify-content:center;padding:24px}"
 			+ "#cb-block .cb-card{max-width:520px;width:100%;background:#fff;border-radius:16px;padding:36px 32px;"
@@ -95,8 +99,17 @@
 	}
 
 	function removePill() {
-		var p = document.getElementById("cb-pill");
-		if (p && p.parentNode) p.parentNode.removeChild(p);
+		["cb-pill", "cb-renew-nav"].forEach(function (id) {
+			var el = document.getElementById(id);
+			if (el && el.parentNode) el.parentNode.removeChild(el);
+		});
+	}
+
+	function pillLabel(cb) {
+		var d = cb.days_left;
+		if (d < 0) return "Your subscription expired on " + fmtDate(cb.end_date);
+		if (d === 0) return "Your subscription expires today";
+		return "Your subscription expires on " + fmtDate(cb.end_date) + " — " + d + (d === 1 ? " day remaining" : " days remaining");
 	}
 
 	function showPill(cb) {
@@ -107,32 +120,23 @@
 			|| document.querySelector("header.navbar");
 		if (!nav) return false;
 		removePill();
-		var cls = "";
-		var label;
-		if (cb.days_left < 0) {
-			cls = "cb-danger";
-			label = "Billing overdue";
-		} else if (cb.days_left <= 7) {
-			cls = "cb-warn";
-			label = "Next billing: " + fmtDate(cb.end_date) + " · " + cb.days_left + "d left";
-		} else {
-			label = "Next billing: " + fmtDate(cb.end_date) + " · " + cb.days_left + " days left";
-		}
-		var m = money(cb);
-		if (m) label += " · " + m;
+		var cls = cb.days_left < 0 ? "cb-danger" : cb.days_left <= 7 ? "cb-warn" : "";
 		var pill = document.createElement("span");
 		pill.id = "cb-pill";
 		if (cls) pill.className = cls;
-		pill.title = "Subscription end date: " + fmtDate(cb.end_date);
-		pill.textContent = label;
+		pill.textContent = pillLabel(cb);
+		nav.insertBefore(pill, nav.firstChild);
+		// "Renew Subscription" link right after the text (scheme-checked href).
 		var url = safeUrl(cb.renew_url);
 		if (url) {
-			pill.className = (pill.className ? pill.className + " " : "") + "cb-link";
-			pill.title = "Renew subscription";
-			pill.addEventListener("click", function () { window.open(url, "_blank", "noopener"); });
+			var a = document.createElement("a");
+			a.id = "cb-renew-nav";
+			a.textContent = "Renew Subscription";
+			a.href = url;
+			a.target = "_blank";
+			a.rel = "noopener noreferrer";
+			nav.insertBefore(a, pill.nextSibling);
 		}
-		// Insert before the nav items so it sits on the left of the right-side cluster.
-		nav.insertBefore(pill, nav.firstChild);
 		return true;
 	}
 
