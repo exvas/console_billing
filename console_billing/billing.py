@@ -9,10 +9,10 @@ Config keys (all optional; absence = feature off, site behaves normally):
     console_billing_hard_lock   0 | 1   when suspended, also block server-side
 
 Suspension precedence (see get_state):
-    status == "suspended"            -> suspended (explicit)
-    status == "active"               -> NOT suspended (explicit grant, overrides date)
-    else, end_date set and past      -> suspended (auto, no cron dependency)
+    status == "suspended"            -> suspended (explicit early force-suspend)
+    else, end_date set and past      -> suspended (auto — the end date rules)
     else                             -> active
+(status="active" does NOT override a passed end date; renew by extending it.)
 """
 
 import frappe
@@ -46,10 +46,11 @@ def get_state():
             end_date = None
             days_left = None
 
+    # The end date is the source of truth for auto-suspend. Only an explicit
+    # status="suspended" force-suspends early; status="active" does NOT override
+    # a passed end date (reactivation = extend the end date via renewal).
     if status == "suspended":
         suspended = True
-    elif status == "active":
-        suspended = False
     elif end_date is not None:
         suspended = days_left is not None and days_left < 0
     else:
