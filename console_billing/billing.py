@@ -80,36 +80,58 @@ def boot(bootinfo):
         frappe.log_error(title="console_billing boot failed")
 
 
-# Paths that must stay reachable even when hard-locked, so the operator/console
-# can still recover the site and static assets can load.
+@frappe.whitelist(allow_guest=True)
+def public_state():
+    """Guest-safe subset for the LOGIN page banner. Exposes only the expiry +
+    the (already-public) renew link — never contact/amount/currency/hard_lock."""
+    try:
+        s = get_state()
+        return {
+            "enabled": s["enabled"],
+            "suspended": s["suspended"],
+            "end_date": s["end_date"],
+            "days_left": s["days_left"],
+            "renew_url": s["renew_url"],
+        }
+    except Exception:
+        return {"enabled": False}
+
+
+# Paths that must stay reachable when suspended, so a logged-out user can still
+# see + submit the login page, reset a password, and load static assets.
 _ALLOW_PREFIXES = (
     "/assets/",
+    "/login",
+    "/api/method/login",
     "/api/method/logout",
-    "/api/method/frappe.utils.change_log",
     "/api/method/frappe.core.doctype.user.user.reset_password",
+    "/api/method/frappe.www.contact",
+    "/update-password",
 )
 
 
 def enforce():
-    """before_request hook — OPT-IN server-side hard lock. Only fires when the
-    site is suspended AND console_billing_hard_lock is set. Uses Frappe's own
-    SessionStopped path (a reliable 503), so it never 500s the request.
+    """before_request hook — when the subscription is suspended/expired, log the
+    signed-in user OUT. Frappe's own desk route then redirects Guests to /login
+    (www/app.py), so an expired site can't be used and the user lands on login.
 
-    Without hard_lock the desk still loads and the client-side overlay shows the
-    custom 'Bill not Paid' message instead."""
+    Guests are left alone (the login page + login API must work), allow-listed
+    paths are skipped, and any error fails OPEN so a bug can never lock a site."""
     try:
         request = getattr(frappe.local, "request", None)
         if request is None:
             return
-        state = get_state()
-        if not (state["suspended"] and state["hard_lock"]):
+        if not get_state()["suspended"]:
             return
+        session = getattr(frappe, "session", None)
+        user = getattr(session, "user", None) if session else None
+        if not user or user == "Guest":
+            return  # already blocked; let the login page + login proceed
         path = request.path or ""
         if path.startswith(_ALLOW_PREFIXES):
             return
-        raise frappe.SessionStopped("Site suspended — Bill not Paid")
-    except frappe.SessionStopped:
-        raise
+        frappe.local.login_manager.logout()
+        frappe.db.commit()
     except Exception:
         # Enforcement must never itself break the site; fail open + log.
-        frappe.log_error(title="console_billing enforce failed")
+        frappe.log_error(title="console_billing enforce (logout) failed")

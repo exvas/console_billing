@@ -29,6 +29,9 @@ app_license = "mit"
 # Bundled (content-hashed) so a JS update busts the browser cache automatically.
 app_include_js = "console_billing.bundle.js"
 
+# Website/login pages: banner explaining an expired subscription + Renew link.
+web_include_js = "console_billing_web.bundle.js"
+
 # Expose billing state to the desk (frappe.boot.console_billing)
 extend_bootinfo = "console_billing.billing.boot"
 
